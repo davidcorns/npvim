@@ -21,7 +21,7 @@ void updateLineNumMargin(MyApp* app) {
 	app->SendEditor(SCI_SETMARGINWIDTHN, 0, margin);
 }
 
-void updateState(MyApp* app) {
+void updateInfo(MyApp* app) {
 	app->row = util::getCurLine(app);
 	app->col = util::getCurCol(app);
 	app->pos = app->SendEditor(SCI_GETCURRENTPOS);
@@ -96,8 +96,7 @@ public:
 
 
 //state functions declaration
-int Start(MyApp* app, char ch);	//num is the startup mode
-int Norm(MyApp* app, char ch);
+int Start(MyApp* app, char ch);
 int Move(MyApp* app, char ch);
 int Goto(MyApp* app, char ch);
 int Del(MyApp* app, char ch);
@@ -130,16 +129,7 @@ int Start(MyApp* app, char ch) {
 	}
 	
 	switch(ch) {
-		/*	New Line	*/
-		case KEYCODE('O'):
-			if(--row < 0) row = 0;
-			app->SendEditor(SCI_GOTOLINE, row);
-		case KEYCODE('o'):
-			app->toInsertMode();
-			app->SendEditor(SCI_LINEEND);
-			app->SendEditor(SCI_NEWLINE);
-			break;	
-		
+	
 		/*	Home & End	*/
 		case KEYCODE('$'):
 			app->SendEditor(SCI_LINEEND);
@@ -185,58 +175,41 @@ int Start(MyApp* app, char ch) {
 		/*	Undo & Redo	*/
 		case KEYCODE('u'): {
 			ScopeTempAllowEdit stae(app);
-			app->SendEditor(SCI_UNDO);
+			for(int i=0; i<num; ++i) {
+				app->SendEditor(SCI_UNDO);
+			}
 			return SUCCESS;
 		}
 		
-		/*	Page Up/Down	*/
-		case KEYCODE(CTRL + 'D'):
-			app->SendEditor(SCI_PAGEDOWN);
-			return SUCCESS;
-			
-		case KEYCODE(CTRL + 'U'):	
-			app->SendEditor(SCI_PAGEUP);
-			return SUCCESS;
-	}
-	
-	return State::Norm(app, ch);
-}
-
-	
-int Norm(MyApp* app, char ch) {
-	int& num = app->cmdNum[0];
-	
-	switch(ch) {
+		/*	to insert mode	*/			
 		case KEYCODE('A'):
 			app->SendEditor(SCI_LINEEND);
 			app->toInsertMode();
-			break;
+			return SUCCESS;
 
 		case KEYCODE('I'):
 			app->SendEditor(SCI_HOME);
 			app->toInsertMode();
-			break;
+			return SUCCESS;
 
 		case KEYCODE('i'):
 			app->toInsertMode();
-			break;	
+			return SUCCESS;
 			
-		case KEYCODE('u'):
-			app->SendEditor(WM_UNDO);
-			break;
-
-		case KEYCODE('>'):
-			app->SendEditor(SCI_TAB);
-			break;
-			
-		case KEYCODE('<'):
-			app->SendEditor(SCI_BACKTAB);
-			break;
-	}	//switch(ch)
-
-	updateLineNumMargin(app);
+		/*	New Line	*/
+		case KEYCODE('O'):
+			if(--row < 0) row = 0;
+			app->SendEditor(SCI_GOTOLINE, row);
+		case KEYCODE('o'):
+			app->toInsertMode();
+			app->SendEditor(SCI_LINEEND);
+			app->SendEditor(SCI_NEWLINE);
+			return SUCCESS;	
+	}
 	return SUCCESS;
 }
+
+	
 
 
 int Move(MyApp* app, char ch) {
@@ -432,7 +405,7 @@ void MyApp::Process(MSG* pmsg) {
 
 void MyApp::Notify(SCNotification *notification) {
 	Base::Notify(notification);
-	updateState(this);
+	updateInfo(this);
 	switch(mode) {
 		case INSERT:
 			InsertModeNotify(notification);
@@ -459,7 +432,6 @@ void MyApp::Command(int id) {
 			Base::Command(id);
 	};	//switch (id)
 	::SetFocus(wEditor);
-	updateLineNumMargin(this);
 }
 
 void MyApp::InitialiseEditor() {
