@@ -1,0 +1,42 @@
+# Project: winNote
+# Makefile created by Dev-C++ 4.9.9.2
+
+CPP  = g++.exe
+CC   = gcc.exe
+WINDRES = windres.exe
+RES  = ../obj/winNote_private.res
+OBJ  = ../obj/main.o ../obj/DMApp.o ../obj/MyApp.o ../obj/util.o $(RES)
+LINKOBJ  = ../obj/main.o ../obj/DMApp.o ../obj/MyApp.o ../obj/util.o $(RES)
+LIBS =  -L"C:/Dev-Cpp/lib" -L"../lib" -mwindows   
+INCS =  -I"C:/Dev-Cpp/include"  -I"../../scintilla"  -I"../src" 
+CXXINCS =  -I"C:/Dev-Cpp/lib/gcc/mingw32/3.4.2/include"  -I"C:/Dev-Cpp/include/c++/3.4.2/backward"  -I"C:/Dev-Cpp/include/c++/3.4.2/mingw32"  -I"C:/Dev-Cpp/include/c++/3.4.2"  -I"C:/Dev-Cpp/include"  -I"../../scintilla"  -I"../src" 
+BIN  = ../bin/winNote.exe
+CXXFLAGS = $(CXXINCS)   -fexpensive-optimizations -O3
+CFLAGS = $(INCS)   -fexpensive-optimizations -O3
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before ../bin/winNote.exe all-after
+
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CPP) $(LINKOBJ) -o "..\bin\winNote.exe" $(LIBS)
+
+../obj/main.o: ../src/main.cpp
+	$(CPP) -c ../src/main.cpp -o ../obj/main.o $(CXXFLAGS)
+
+../obj/DMApp.o: ../src/DMApp.cpp
+	$(CPP) -c ../src/DMApp.cpp -o ../obj/DMApp.o $(CXXFLAGS)
+
+../obj/MyApp.o: ../src/MyApp.cpp
+	$(CPP) -c ../src/MyApp.cpp -o ../obj/MyApp.o $(CXXFLAGS)
+
+../obj/util.o: ../src/util.cpp
+	$(CPP) -c ../src/util.cpp -o ../obj/util.o $(CXXFLAGS)
+
+../obj/winNote_private.res: winNote_private.rc ../src/DMApp.rc 
+	$(WINDRES) -i winNote_private.rc --input-format=rc -o ../obj/winNote_private.res -O coff  --include-dir ../src
