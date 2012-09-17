@@ -113,6 +113,7 @@ enum {
 
 int Start(MyApp* app, char ch) {
 	int& num = app->cmdNum[0];
+	int& row = app->row;
 	const int& pos = app->pos;
 	
 	if(ch == '0' && num==0 ) {
@@ -129,6 +130,16 @@ int Start(MyApp* app, char ch) {
 	}
 	
 	switch(ch) {
+		/*	New Line	*/
+		case KEYCODE('O'):
+			if(--row < 0) row = 0;
+			app->SendEditor(SCI_GOTOLINE, row);
+		case KEYCODE('o'):
+			app->toInsertMode();
+			app->SendEditor(SCI_LINEEND);
+			app->SendEditor(SCI_NEWLINE);
+			break;	
+		
 		/*	Home & End	*/
 		case KEYCODE('$'):
 			app->SendEditor(SCI_LINEEND);
@@ -147,6 +158,7 @@ int Start(MyApp* app, char ch) {
 		
 		/*	Move	*/
 		case KEYCODE('b'):
+		case KEYCODE('e'):
 		case KEYCODE('w'):
 		case KEYCODE('h'):
 		case KEYCODE('j'):
@@ -237,6 +249,10 @@ int Move(MyApp* app, char ch) {
 	switch(ch) {
 		case KEYCODE('b'):
 			app->SendEditor(SCI_WORDLEFT);
+			break;
+			
+		case KEYCODE('e'):
+			//app->SendEditor(SCI_WORDPARTRIGHT);
 			break;
 			
 		case KEYCODE('h'): {
