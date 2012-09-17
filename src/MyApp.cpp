@@ -97,6 +97,7 @@ public:
 
 //state functions declaration
 int Start(MyApp* app, char ch);
+int Insert(MyApp* app, char ch);
 int Move(MyApp* app, char ch);
 int Goto(MyApp* app, char ch);
 int Del(MyApp* app, char ch);
@@ -112,7 +113,6 @@ enum {
 
 int Start(MyApp* app, char ch) {
 	int& num = app->cmdNum[0];
-	int& row = app->row;
 	const int& pos = app->pos;
 	
 	if(ch == '0' && num==0 ) {
@@ -181,6 +181,17 @@ int Start(MyApp* app, char ch) {
 			return SUCCESS;
 		}
 		
+		default:
+			return Insert(app, ch);
+	}
+}
+
+
+int Insert(MyApp* app, char ch) {
+	int& num = app->cmdNum[0];
+	int& row = app->row;
+
+	switch(ch) {
 		/*	to insert mode	*/			
 		case KEYCODE('A'):
 			app->SendEditor(SCI_LINEEND);
@@ -204,9 +215,8 @@ int Start(MyApp* app, char ch) {
 			app->toInsertMode();
 			app->SendEditor(SCI_LINEEND);
 			app->SendEditor(SCI_NEWLINE);
-			return SUCCESS;	
-	}
-	return SUCCESS;
+			return SUCCESS;		
+	}	//witch(ch)
 }
 
 	
