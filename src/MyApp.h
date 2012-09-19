@@ -4,6 +4,7 @@
 #include <DMApp.h>
 #define NUM_BUF_SIZE 2
 
+
 class Mode;
 class MyApp;
 
@@ -22,7 +23,6 @@ public:
 	int cmdNum[NUM_BUF_SIZE];
 	
 private:
-	char* textbuf;
 	int mode;
 	State::Func state;
 
@@ -48,9 +48,7 @@ public:
 	int toState(State::Func s);
 	
 	/*	helper functions	*/
-	
-	char* getBuf(int size);
-	
+
 	inline void trace(char* msg) {::MessageBox(wMain, msg, msg, MB_OK);	}
 	void trace(int i);
 	

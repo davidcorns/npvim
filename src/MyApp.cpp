@@ -10,7 +10,6 @@
 #define LINENUM_MARGIN_BASE 12
 
 
-static const int TEXT_BUF_SIZE = 1000;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /*	helper functions of MyApp	*/
@@ -55,7 +54,8 @@ void MyApp::InsertModeNotify(SCNotification* notification) {
 				case '\n': {
 					//auto indent
 					const int lineNum = util::getEndLine(this);
-					char* txt = this->getBuf(TEXT_BUF_SIZE);
+					const int lineLength = SendEditor(SCI_LINELENGTH);
+					char* txt = new char[lineLength];
 					SendEditor(SCI_GETLINE, lineNum, reinterpret_cast<LPARAM>(txt));
 					char* p = txt;
 					while(*p==' ' || *p=='\t') {
@@ -64,6 +64,7 @@ void MyApp::InsertModeNotify(SCNotification* notification) {
 					if(*p != '\0' && *p!='\r' && *p!='\n' && p!=txt) {
 						SendEditor(SCI_ADDTEXT, p-txt, reinterpret_cast<LPARAM>(txt));
 					}
+					if(txt) delete txt;
 				} break;
 			}
 		} break;
@@ -102,6 +103,10 @@ int Move(MyApp* app, char ch);
 int Goto(MyApp* app, char ch);
 int Del(MyApp* app, char ch);
 int DelChar(MyApp* app, char ch);
+int Find(MyApp* app, char ch);
+int FindBack(MyApp* app, char ch);
+int Till(MyApp* app, char ch);
+int TillBack(MyApp* app, char ch);
 	
 //implementation of state functions
 
@@ -162,7 +167,8 @@ int Start(MyApp* app, char ch) {
 		}
 		
 		/*	Delete */
-		case KEYCODE('x'): {
+		case KEYCODE('x'): 
+		{
 			for(int i=0; i<num; ++i) {
 				if(DelChar(app, 'x') == FAIL) return FAIL;
 			}
@@ -173,13 +179,24 @@ int Start(MyApp* app, char ch) {
 			return app->toState(Del);
 			
 		/*	Undo & Redo	*/
-		case KEYCODE('u'): {
+		case KEYCODE('u'): 
+		{
 			ScopeTempAllowEdit stae(app);
 			for(int i=0; i<num; ++i) {
 				app->SendEditor(SCI_UNDO);
 			}
 			return SUCCESS;
 		}
+		
+		/*	Find & Till	*/
+		case KEYCODE('F'):
+			return app->toState(FindBack);
+		case KEYCODE('f'): 
+			return app->toState(Find);
+		case KEYCODE('T'):
+			return app->toState(TillBack);
+		case KEYCODE('t'):
+			return app->toState(Till);
 		
 		default:
 			return Insert(app, ch);
@@ -342,6 +359,61 @@ int DelChar(MyApp* app, char) {
 	return SUCCESS;
 }
 
+int _Find(MyApp* app, char ch, UINT Msg, short delta) {
+	const char str[] = {ch, '\0'};
+
+	Sci_TextToFind ttf;
+	ttf.chrg.cpMax = app->SendEditor(SCI_GETLINEENDPOSITION, app->row);
+	ttf.lpstrText = const_cast<char*>(str);
+	
+	int pos = app->pos;
+	for(int i=0; i<app->cmdNum[0]; ++i) {
+		ttf.chrg.cpMin = pos + 1;
+		pos = app->SendEditor(SCI_FINDTEXT, SCFIND_MATCHCASE, (LPARAM)&ttf);
+		if( pos == -1 ) return FAIL;
+	}
+
+	app->SendEditor(Msg, pos + delta);
+	return SUCCESS;
+} 
+
+int _FindBack(MyApp* app, char ch, UINT Msg, int delta) {
+	const char str[] = {ch, '\0'};
+
+	Sci_TextToFind ttf;
+	ttf.chrg.cpMax = app->SendEditor(SCI_POSITIONFROMLINE, app->row);
+	ttf.lpstrText = const_cast<char*>(str);
+	
+	int pos = app->pos;
+	for(int i=0; i<app->cmdNum[0]; ++i) {
+		ttf.chrg.cpMin = pos - 1;
+		pos = app->SendEditor(SCI_FINDTEXT, SCFIND_MATCHCASE, (LPARAM)&ttf);
+		if( pos == -1 ) return FAIL;
+	}
+
+	app->SendEditor(Msg, pos + delta);
+	return SUCCESS;	
+}
+
+
+int Find(MyApp* app, char ch) {
+	return _Find(app, ch, SCI_GOTOPOS, 0);
+}
+
+int FindBack(MyApp* app, char ch) {
+	return _FindBack(app, ch, SCI_GOTOPOS, 0);
+}
+
+
+int Till(MyApp* app, char ch) {
+	return _Find(app, ch, SCI_GOTOPOS, -1);
+}
+
+
+int TillBack(MyApp* app, char ch) {
+	return _FindBack(app, ch, SCI_GOTOPOS, +1);
+}
+
 }	//namespace State
 
 
@@ -385,8 +457,6 @@ void MyApp::CommandModeNotify(SCNotification* notification) {
 
 
 MyApp::MyApp() {
-	static char tmpBuf[TEXT_BUF_SIZE];
-	textbuf = tmpBuf;
 }
 
 
@@ -408,6 +478,8 @@ void MyApp::Process(MSG* pmsg) {
 					break;
 			}
 	}
+	
+	updateLineNumMargin(this);
 }
 
 
@@ -451,10 +523,6 @@ void MyApp::InitialiseEditor() {
 	toDefaultMode();
 }
 
-char* MyApp::getBuf(int size) {
-	if(size>TEXT_BUF_SIZE) return NULL;
-	return textbuf;
-}
 
 
 void MyApp::trace(int i) {
