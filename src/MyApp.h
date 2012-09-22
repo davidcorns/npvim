@@ -14,13 +14,11 @@ namespace State {
 
 class MyApp : public DMApp{
 	typedef DMApp Base;
+
 	
-public:
-	int row;
-	int col;
-	int pos;
-	int lineCount;
-	int cmdNum[NUM_BUF_SIZE];
+public:	
+	struct Info;
+	Info* info;
 	
 private:
 	int mode;

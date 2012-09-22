@@ -11,22 +11,42 @@
 
 
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
+/*	D-Pointer class of MyApp	*/
+struct MyApp::Info {
+	int row;
+	int col;
+	int pos;
+	int lineCount;
+	int lineLen;
+	int cmdNum[NUM_BUF_SIZE];
+};
+
+static const char EMPTY_STRING[] = "";
+
+
 /*	helper functions of MyApp	*/
 
 void updateLineNumMargin(MyApp* app) {
 	//line number margin auto adjust
-	const int margin = int(1 + log10(app->lineCount)) * LINENUM_MARGIN_BASE;
+	const int margin = int(1 + log10(app->info->lineCount)) * LINENUM_MARGIN_BASE;
 	app->SendEditor(SCI_SETMARGINWIDTHN, 0, margin);
 }
 
 void updateInfo(MyApp* app) {
-	app->row = util::getCurLine(app);
-	app->col = util::getCurCol(app);
-	app->pos = app->SendEditor(SCI_GETCURRENTPOS);
-	app->lineCount = app->SendEditor(EM_GETLINECOUNT);
+	MyApp::Info* info = app->info;
+	info->row = util::getCurLine(app);
+	info->col = util::getCurCol(app);
+	info->pos = app->SendEditor(SCI_GETCURRENTPOS);
+	info->lineCount = app->SendEditor(EM_GETLINECOUNT);
+	info->lineLen = app->SendEditor(SCI_LINELENGTH);
 }
 
+
+inline int getLineEndPosition(MyApp* app, int line) {
+	return app->SendEditor(SCI_GETLINEENDPOSITION, line);	
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 /*	Mode	*/
@@ -54,8 +74,7 @@ void MyApp::InsertModeNotify(SCNotification* notification) {
 				case '\n': {
 					//auto indent
 					const int lineNum = util::getEndLine(this);
-					const int lineLength = SendEditor(SCI_LINELENGTH);
-					char* txt = new char[lineLength];
+					char* txt = new char[info->lineLen];
 					SendEditor(SCI_GETLINE, lineNum, reinterpret_cast<LPARAM>(txt));
 					char* p = txt;
 					while(*p==' ' || *p=='\t') {
@@ -78,7 +97,7 @@ namespace State {
 
 //helper functions and classes
 bool readingCmdNum(MyApp* app, char ch, int index) {
-	int& num = app->cmdNum[index];
+	int& num = app->info->cmdNum[index];
 	if(util::isDigit(ch)) {
 		num *= 10;
 		num += ch-'0';
@@ -117,8 +136,8 @@ enum {
 };
 
 int Start(MyApp* app, char ch) {
-	int& num = app->cmdNum[0];
-	const int& pos = app->pos;
+	int& num = app->info->cmdNum[0];
+	const int& pos = app->info->pos;
 	
 	if(ch == '0' && num==0 ) {
 		app->SendEditor(SCI_HOME);
@@ -130,7 +149,7 @@ int Start(MyApp* app, char ch) {
 	}
 
 	if(num==0) {
-		num = (ch == KEYCODE('G')) ? app->lineCount : num+1;
+		num = (ch == KEYCODE('G')) ? app->info->lineCount : num+1;
 	}
 	
 	switch(ch) {
@@ -197,6 +216,12 @@ int Start(MyApp* app, char ch) {
 			return app->toState(TillBack);
 		case KEYCODE('t'):
 			return app->toState(Till);
+			
+		case KEYCODE('q'): {
+			ScopeTempAllowEdit stae(app);
+			app->SendEditor(SCI_REPLACETARGET, 1, (LPARAM)"");
+			return SUCCESS;
+		}
 		
 		default:
 			return Insert(app, ch);
@@ -205,8 +230,8 @@ int Start(MyApp* app, char ch) {
 
 
 int Insert(MyApp* app, char ch) {
-	int& num = app->cmdNum[0];
-	int& row = app->row;
+	int& num = app->info->cmdNum[0];
+	int& row = app->info->row;
 
 	switch(ch) {
 		/*	to insert mode	*/			
@@ -240,11 +265,11 @@ int Insert(MyApp* app, char ch) {
 
 
 int Move(MyApp* app, char ch) {
-	int& num = app->cmdNum[0];
+	int& num = app->info->cmdNum[0];
 	
-	const int& line = app->row;
-	const int& col = app->col;
-	const int& pos = app->pos;
+	const int& line = app->info->row;
+	const int& col = app->info->col;
+	const int& pos = app->info->pos;
 	
 	switch(ch) {
 		case KEYCODE('b'):
@@ -262,7 +287,7 @@ int Move(MyApp* app, char ch) {
 		} break;
 		
 		case KEYCODE('j'): {
-			if(line >= app->lineCount-1) return FAIL;
+			if(line >= app->info->lineCount-1) return FAIL;
 			app->SendEditor(SCI_LINEDOWN);
 		} break;
 			
@@ -272,7 +297,7 @@ int Move(MyApp* app, char ch) {
 			break;
 		
 		case KEYCODE('l'): {
-			const int lineEndPos = app->SendEditor(SCI_GETLINEENDPOSITION, line);
+			const int lineEndPos = getLineEndPosition(app, line);
 			if(pos >= lineEndPos) return FAIL;
 			app->SendEditor(SCI_CHARRIGHT);
 		} break;
@@ -288,7 +313,7 @@ int Move(MyApp* app, char ch) {
 
 
 int Goto(MyApp* app, char ch) {
-	int& num = app->cmdNum[0];
+	int& num = app->info->cmdNum[0];
 
 	switch(ch) {
 		case KEYCODE('g'):
@@ -303,7 +328,7 @@ int Goto(MyApp* app, char ch) {
 
 int Del(MyApp* app, char ch) {
 	ScopeTempAllowEdit stae(app);
-	int& num = app->cmdNum[1];
+	int& num = app->info->cmdNum[1];
 	if(num==0) {
 		switch(ch) {
 			case KEYCODE('0'): 
@@ -330,7 +355,7 @@ int Del(MyApp* app, char ch) {
 	if(num==0) ++num;
 	
 	/*	delete operations	*/
-	const int mnum = app->cmdNum[0] * app->cmdNum[1];
+	const int mnum = app->info->cmdNum[0] * app->info->cmdNum[1];
 	for(int i=0; i<mnum; ++i) {
 		switch(ch) {
 			case KEYCODE('b'):
@@ -363,11 +388,11 @@ int _Find(MyApp* app, char ch, UINT Msg, short delta) {
 	const char str[] = {ch, '\0'};
 
 	Sci_TextToFind ttf;
-	ttf.chrg.cpMax = app->SendEditor(SCI_GETLINEENDPOSITION, app->row);
+	ttf.chrg.cpMax = getLineEndPosition(app, app->info->row);
 	ttf.lpstrText = const_cast<char*>(str);
 	
-	int pos = app->pos;
-	for(int i=0; i<app->cmdNum[0]; ++i) {
+	int pos = app->info->pos;
+	for(int i=0; i<app->info->cmdNum[0]; ++i) {
 		ttf.chrg.cpMin = pos + 1;
 		pos = app->SendEditor(SCI_FINDTEXT, SCFIND_MATCHCASE, (LPARAM)&ttf);
 		if( pos == -1 ) return FAIL;
@@ -381,11 +406,11 @@ int _FindBack(MyApp* app, char ch, UINT Msg, int delta) {
 	const char str[] = {ch, '\0'};
 
 	Sci_TextToFind ttf;
-	ttf.chrg.cpMax = app->SendEditor(SCI_POSITIONFROMLINE, app->row);
+	ttf.chrg.cpMax = app->SendEditor(SCI_POSITIONFROMLINE, app->info->row);
 	ttf.lpstrText = const_cast<char*>(str);
 	
-	int pos = app->pos;
-	for(int i=0; i<app->cmdNum[0]; ++i) {
+	int pos = app->info->pos;
+	for(int i=0; i<app->info->cmdNum[0]; ++i) {
 		ttf.chrg.cpMin = pos - 1;
 		pos = app->SendEditor(SCI_FINDTEXT, SCFIND_MATCHCASE, (LPARAM)&ttf);
 		if( pos == -1 ) return FAIL;
@@ -420,7 +445,7 @@ int TillBack(MyApp* app, char ch) {
 #define DEFAULT_STATE State::Start
 
 void MyApp::initState() {
-	memset(cmdNum, 0, sizeof(cmdNum));
+	memset(info->cmdNum, 0, sizeof(info->cmdNum));
 	toState(DEFAULT_STATE);
 }
 
@@ -457,10 +482,12 @@ void MyApp::CommandModeNotify(SCNotification* notification) {
 
 
 MyApp::MyApp() {
+	info = new Info();
 }
 
 
 MyApp::~MyApp() {
+	if(info) delete info;
 }
 
 
