@@ -1,3 +1,18 @@
+/*
+	Author : David Corns
+
+	This demo application using Scintilla was found from internet, and was used for develop a vi-like editor in Windows enviroment
+	
+	The main.cpp, DMApp class(DMApp.h, DMApp.cpp), ressource.h are from the origanal demo, and they are mostly likely remain origin.
+	The rest are newly added for the vi-like functionility.
+	
+	The trick used here is called complie-time compitibility. 
+	A child class MyApp was inherite from DMApp, and it contains the interface of DMApp.
+	Thus, the most changes to the demo code is to replace the DMApp defination to MyApp, and that's it.	
+	
+	(see line 22 of main.cpp: static MyApp app;)
+*/
+
 // A simple demonstration application using Scintilla
 #include <windows.h>
 #include <resource.h>
