@@ -126,6 +126,11 @@ int Find(MyApp* app, char ch);
 int FindBack(MyApp* app, char ch);
 int Till(MyApp* app, char ch);
 int TillBack(MyApp* app, char ch);
+int DelFind(MyApp* app, char ch);
+int DelFindBack(MyApp* app, char ch);
+int DelTill(MyApp* app, char ch);
+int DelTillBack(MyApp* app, char ch);
+int Replace(MyApp* app, char ch);
 	
 //implementation of state functions
 
@@ -216,12 +221,11 @@ int Start(MyApp* app, char ch) {
 			return app->toState(TillBack);
 		case KEYCODE('t'):
 			return app->toState(Till);
-			
-		case KEYCODE('q'): {
-			ScopeTempAllowEdit stae(app);
-			app->SendEditor(SCI_REPLACETARGET, 1, (LPARAM)"");
-			return SUCCESS;
-		}
+		
+		/*	Replace	*/
+		case KEYCODE('r'):
+			app->SendEditor(SCI_SETCURRENTPOS, app->info->pos+1);
+			return app->toState(Replace);
 		
 		default:
 			return Insert(app, ch);
@@ -354,6 +358,19 @@ int Del(MyApp* app, char ch) {
 	
 	if(num==0) ++num;
 	
+	/*	delete for Find & Till	*/
+	switch(ch) {
+		case KEYCODE('F'):
+			return app->toState(DelFindBack);
+		case KEYCODE('f'): 
+			return app->toState(DelFind);
+		case KEYCODE('T'):
+			return app->toState(DelTillBack);
+		case KEYCODE('t'):
+			return app->toState(DelTill);
+	}	//switch(ch) 
+	
+	
 	/*	delete operations	*/
 	const int mnum = app->info->cmdNum[0] * app->info->cmdNum[1];
 	for(int i=0; i<mnum; ++i) {
@@ -369,10 +386,10 @@ int Del(MyApp* app, char ch) {
 			case KEYCODE('w'):
 				app->SendEditor(SCI_DELWORDRIGHT);
 				break;
+				
 		}	//switch(ch)
 	}	//for
 	
-	app->SendEditor(SCI_SETREADONLY, true);
 	return SUCCESS;
 }
 
@@ -384,7 +401,7 @@ int DelChar(MyApp* app, char) {
 	return SUCCESS;
 }
 
-int _Find(MyApp* app, char ch, UINT Msg, short delta) {
+int _Find(MyApp* app, char ch, UINT Msg, int num, short delta) {
 	const char str[] = {ch, '\0'};
 
 	Sci_TextToFind ttf;
@@ -392,7 +409,7 @@ int _Find(MyApp* app, char ch, UINT Msg, short delta) {
 	ttf.lpstrText = const_cast<char*>(str);
 	
 	int pos = app->info->pos;
-	for(int i=0; i<app->info->cmdNum[0]; ++i) {
+	for(int i=0; i<num; ++i) {
 		ttf.chrg.cpMin = pos + 1;
 		pos = app->SendEditor(SCI_FINDTEXT, SCFIND_MATCHCASE, (LPARAM)&ttf);
 		if( pos == -1 ) return FAIL;
@@ -402,7 +419,7 @@ int _Find(MyApp* app, char ch, UINT Msg, short delta) {
 	return SUCCESS;
 } 
 
-int _FindBack(MyApp* app, char ch, UINT Msg, int delta) {
+int _FindBack(MyApp* app, char ch, UINT Msg, int num, int delta) {
 	const char str[] = {ch, '\0'};
 
 	Sci_TextToFind ttf;
@@ -410,7 +427,7 @@ int _FindBack(MyApp* app, char ch, UINT Msg, int delta) {
 	ttf.lpstrText = const_cast<char*>(str);
 	
 	int pos = app->info->pos;
-	for(int i=0; i<app->info->cmdNum[0]; ++i) {
+	for(int i=0; i<num; ++i) {
 		ttf.chrg.cpMin = pos - 1;
 		pos = app->SendEditor(SCI_FINDTEXT, SCFIND_MATCHCASE, (LPARAM)&ttf);
 		if( pos == -1 ) return FAIL;
@@ -422,21 +439,69 @@ int _FindBack(MyApp* app, char ch, UINT Msg, int delta) {
 
 
 int Find(MyApp* app, char ch) {
-	return _Find(app, ch, SCI_GOTOPOS, 0);
+	return _Find(app, ch, SCI_GOTOPOS, app->info->cmdNum[0], 0);
 }
 
 int FindBack(MyApp* app, char ch) {
-	return _FindBack(app, ch, SCI_GOTOPOS, 0);
+	return _FindBack(app, ch, SCI_GOTOPOS, app->info->cmdNum[0], 0);
 }
 
 
 int Till(MyApp* app, char ch) {
-	return _Find(app, ch, SCI_GOTOPOS, -1);
+	return _Find(app, ch, SCI_GOTOPOS, app->info->cmdNum[0], -1);
 }
 
 
 int TillBack(MyApp* app, char ch) {
-	return _FindBack(app, ch, SCI_GOTOPOS, +1);
+	return _FindBack(app, ch, SCI_GOTOPOS, app->info->cmdNum[0], +1);
+}
+
+
+int DelFind(MyApp* app, char ch) {
+	int res;
+	const int num = app->info->cmdNum[0] * app->info->cmdNum[1];
+	
+	ScopeTempAllowEdit stae(app);
+	res = _Find(app, ch, SCI_SETCURRENTPOS, num, 1);			if(res != SUCCESS) return res;
+	res = app->SendEditor(SCI_CUT);								if(res <= 0) return FAIL;
+	return SUCCESS;
+}
+
+int DelFindBack(MyApp* app, char ch) {
+	int res;
+	const int num = app->info->cmdNum[0] * app->info->cmdNum[1];
+	
+	ScopeTempAllowEdit stae(app);
+	res = _FindBack(app, ch, SCI_SETCURRENTPOS, num, 0);		if(res != SUCCESS) return res;
+	res = app->SendEditor(SCI_CUT);								if(res <= 0) return FAIL;
+	return SUCCESS;
+}
+
+int DelTill(MyApp* app, char ch) {
+	int res;
+	const int num = app->info->cmdNum[0] * app->info->cmdNum[1];
+	
+	ScopeTempAllowEdit stae(app);
+	res = _Find(app, ch, SCI_SETCURRENTPOS, num, 0);			if(res != SUCCESS) return res;
+	res = app->SendEditor(SCI_CUT);								if(res <= 0) return FAIL;
+	return SUCCESS;
+}
+
+int DelTillBack(MyApp* app, char ch) {
+	int res;
+	const int num = app->info->cmdNum[0] * app->info->cmdNum[1];
+	
+	ScopeTempAllowEdit stae(app);
+	res = _FindBack(app, ch, SCI_SETCURRENTPOS, num, +1);		if(res != SUCCESS) return res;
+	res = app->SendEditor(SCI_CUT);								if(res <= 0) return FAIL;
+	return SUCCESS;
+}
+
+int Replace(MyApp* app, char ch) {
+	ScopeTempAllowEdit stae(app);
+	const char str[] = { ch, '\0' };
+	app->SendEditor(SCI_REPLACESEL, NULL, (LPARAM)str);
+	return SUCCESS;
 }
 
 }	//namespace State
