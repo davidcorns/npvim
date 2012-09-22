@@ -1,7 +1,7 @@
 [Project]
 FileName=winNote.dev
 Name=winNote
-UnitCount=11
+UnitCount=14
 Type=0
 Ver=1
 ObjFiles=
@@ -458,9 +458,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit15]
-FileName=..\src\NumState.h
+FileName=..\src\AppInfo.h
 CompileCpp=1
-Folder=src/Mode
+Folder=
 Compile=1
 Link=1
 Priority=1000
@@ -468,9 +468,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit13]
-FileName=..\src\StartUpState.h
+FileName=..\src\StateEnum.h
 CompileCpp=1
-Folder=src/Mode
+Folder=src
 Compile=1
 Link=1
 Priority=1000
@@ -478,9 +478,19 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit14]
-FileName=..\src\NumState.h
+FileName=..\src\AppInfo.h
 CompileCpp=1
-Folder=src/Mode
+Folder=src
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit12]
+FileName=..\src\State.cpp
+CompileCpp=1
+Folder=src
 Compile=1
 Link=1
 Priority=1000
@@ -488,7 +498,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit11]
-FileName=..\src\KeyMap.h
+FileName=..\src\State.h
 CompileCpp=1
 Folder=include
 Compile=1

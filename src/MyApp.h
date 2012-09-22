@@ -2,23 +2,18 @@
 #define __MYAPP_H__
 
 #include <DMApp.h>
+#include <State.h>
 #define NUM_BUF_SIZE 2
 
+//forward declaration
+class AppInfo;
 
-class Mode;
-class MyApp;
-
-namespace State {
-	typedef int(*Func)(MyApp*,char);
-}	//namespace State 
 
 class MyApp : public DMApp{
 	typedef DMApp Base;
 
-	
 public:	
-	struct Info;
-	Info* info;
+	AppInfo* info;
 	
 private:
 	int mode;
