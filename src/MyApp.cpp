@@ -500,7 +500,11 @@ int DelTillBack(MyApp* app, char ch) {
 int Replace(MyApp* app, char ch) {
 	ScopeTempAllowEdit stae(app);
 	const char str[] = { ch, '\0' };
-	app->SendEditor(SCI_REPLACESEL, NULL, (LPARAM)str);
+	app->SendEditor(SCI_ADDTEXT, 1, (LPARAM)str);
+	
+	int res;
+	res = DelChar(app, 'x');		if(res != SUCCESS) return res;
+	res = Move(app, 'h');			if(res != SUCCESS) return res;
 	return SUCCESS;
 }
 
