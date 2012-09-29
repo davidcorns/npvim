@@ -2,7 +2,7 @@
 	Author : David Corns
 
 	This demo application using Scintilla was found from internet, and was used for develop a vi-like editor in Windows enviroment
-	
+
 	The main.cpp, DMApp class(DMApp.h, DMApp.cpp), ressource.h are from the origanal demo, and they are mostly likely remain origin.
 	The rest are newly added for the vi-like functionility.
 	

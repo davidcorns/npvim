@@ -20,19 +20,19 @@ ObjectOutput=..\obj
 OverrideOutput=0
 OverrideOutputName=winNote.exe
 HostApplication=
-Folders=include,res,src
+Folders=include,"origin demo files",res,src
 CommandLine=
 UseCustomMakefile=0
 CustomMakefile=
 IncludeVersionInfo=0
 SupportXPThemes=0
 CompilerSet=0
-CompilerSettings=0000000001001000000000
+CompilerSettings=0001000001001000000000
 
 [Unit1]
 FileName=..\src\main.cpp
 CompileCpp=1
-Folder=src
+Folder=origin demo files
 Compile=1
 Link=1
 Priority=1000
@@ -380,7 +380,7 @@ BuildCmd=
 [Unit2]
 FileName=..\src\resource.h
 CompileCpp=1
-Folder=include
+Folder=origin demo files
 Compile=1
 Link=1
 Priority=1000
@@ -390,7 +390,7 @@ BuildCmd=
 [Unit3]
 FileName=..\src\DMApp.h
 CompileCpp=1
-Folder=include
+Folder=origin demo files
 Compile=1
 Link=1
 Priority=1000
@@ -400,7 +400,7 @@ BuildCmd=
 [Unit4]
 FileName=..\src\DMApp.cpp
 CompileCpp=1
-Folder=src
+Folder=origin demo files
 Compile=1
 Link=1
 Priority=1000

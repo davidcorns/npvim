@@ -13,6 +13,7 @@ int getCurCol(DMApp* app) {
 	return app->SendEditor(SCI_GETCOLUMN, pos);
 }
 
+/*	used by auto indent	*/
 int getEndLine(DMApp* app) {
 	const int startPos = app->SendEditor(SCI_GETENDSTYLED);
 	return app->SendEditor(SCI_LINEFROMPOSITION, startPos);	

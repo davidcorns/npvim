@@ -52,6 +52,7 @@ int DelFind(MyApp* app, char ch);
 int DelFindBack(MyApp* app, char ch);
 int DelTill(MyApp* app, char ch);
 int DelTillBack(MyApp* app, char ch);
+int DelGoto(MyApp* app, char ch);
 int Replace(MyApp* app, char ch);
 
 
@@ -250,6 +251,8 @@ int Goto(MyApp* app, char ch) {
 int Del(MyApp* app, char ch) {
 	ScopeTempAllowEdit stae(app);
 	int& num = app->info->cmdNum[1];
+	
+	/*	delete till absolute position (ignore the num)	*/
 	if(num==0) {
 		switch(ch) {
 			case KEYCODE('0'): 
@@ -275,8 +278,9 @@ int Del(MyApp* app, char ch) {
 	
 	if(num==0) ++num;
 	
-	/*	delete for Find & Till	*/
+	
 	switch(ch) {
+		/*	delete for Find & Till	*/
 		case KEYCODE('F'):
 			return app->toState(DelFindBack);
 		case KEYCODE('f'): 
@@ -285,10 +289,16 @@ int Del(MyApp* app, char ch) {
 			return app->toState(DelTillBack);
 		case KEYCODE('t'):
 			return app->toState(DelTill);
+			
+		/*	delete goto line	*/
+		case KEYCODE('G'):
+		case KEYCODE('g'):
+			return DelGoto(app, ch+1);	//todo: a bit hacking
 	}	//switch(ch) 
 	
+
 	
-	/*	delete operations	*/
+	/*	loop delete operations	*/
 	const int mnum = app->info->cmdNum[0] * app->info->cmdNum[1];
 	for(int i=0; i<mnum; ++i) {
 		switch(ch) {
@@ -308,6 +318,33 @@ int Del(MyApp* app, char ch) {
 	}	//for
 	
 	return SUCCESS;
+}
+
+
+int DelGoto(MyApp* app, char ch) {
+	int res;
+	switch(ch) {
+		case KEYCODE('G')+1: 
+			
+		case KEYCODE('g'):
+		{
+			const int toLine = util::min2(app->info->cmdNum[1]-1, app->info->lineCount);
+			const int curLine = app->info->row;
+			int start = util::min2(toLine, curLine);
+			int end = util::max2(toLine, curLine);
+			app->SendEditor(SCI_GOTOLINE, start);
+			for( ; start < end; ++start) {
+				//app->SendEditor(SCI_LINEDELETE);
+			}
+			return SUCCESS;
+		}
+			
+		case KEYCODE('g')+1:
+			return app->toState(DelGoto);
+			
+		default:
+			return FAIL;	
+	}
 }
 
 
@@ -417,11 +454,8 @@ int DelTillBack(MyApp* app, char ch) {
 int Replace(MyApp* app, char ch) {
 	ScopeTempAllowEdit stae(app);
 	const char str[] = { ch, '\0' };
+	app->SendEditor(SCI_CLEAR);
 	app->SendEditor(SCI_ADDTEXT, 1, (LPARAM)str);
-	
-	int res;
-	res = DelChar(app, 'x');		if(res != SUCCESS) return res;
-	res = Move(app, 'h');			if(res != SUCCESS) return res;
 	return SUCCESS;
 }
 
