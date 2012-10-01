@@ -4,9 +4,9 @@
 class DMApp;
 
 namespace util {
-	int getEndLine(DMApp* app);
-	int getCurLine(DMApp* app);
-	int getCurCol(DMApp* app);
+	int getEndLine(DMApp& app);
+	int getCurLine(DMApp& app);
+	int getCurCol(DMApp& app);
 	
 	inline bool isDigit(char ch) {
 		return ch >= '0' && ch <= '9';

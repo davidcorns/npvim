@@ -5,8 +5,8 @@ CPP  = g++.exe
 CC   = gcc.exe
 WINDRES = windres.exe
 RES  = ../obj/winNote_private.res
-OBJ  = ../obj/main.o ../obj/DMApp.o ../obj/MyApp.o ../obj/util.o ../obj/State.o $(RES)
-LINKOBJ  = ../obj/main.o ../obj/DMApp.o ../obj/MyApp.o ../obj/util.o ../obj/State.o $(RES)
+OBJ  = ../obj/main.o ../obj/DMApp.o ../obj/MyApp.o ../obj/util.o ../obj/State.o ../obj/CommandMode.o ../obj/InsertMode.o $(RES)
+LINKOBJ  = ../obj/main.o ../obj/DMApp.o ../obj/MyApp.o ../obj/util.o ../obj/State.o ../obj/CommandMode.o ../obj/InsertMode.o $(RES)
 LIBS =  -L"C:/Dev-Cpp/lib" -L"../lib" -mwindows   
 INCS =  -I"C:/Dev-Cpp/include"  -I"../../scintilla"  -I"../src" 
 CXXINCS =  -I"C:/Dev-Cpp/lib/gcc/mingw32/3.4.2/include"  -I"C:/Dev-Cpp/include/c++/3.4.2/backward"  -I"C:/Dev-Cpp/include/c++/3.4.2/mingw32"  -I"C:/Dev-Cpp/include/c++/3.4.2"  -I"C:/Dev-Cpp/include"  -I"../../scintilla"  -I"../src" 
@@ -40,6 +40,12 @@ $(BIN): $(OBJ)
 
 ../obj/State.o: ../src/State.cpp
 	$(CPP) -c ../src/State.cpp -o ../obj/State.o $(CXXFLAGS)
+
+../obj/CommandMode.o: ../src/CommandMode.cpp
+	$(CPP) -c ../src/CommandMode.cpp -o ../obj/CommandMode.o $(CXXFLAGS)
+
+../obj/InsertMode.o: ../src/InsertMode.cpp
+	$(CPP) -c ../src/InsertMode.cpp -o ../obj/InsertMode.o $(CXXFLAGS)
 
 ../obj/winNote_private.res: winNote_private.rc ../src/DMApp.rc 
 	$(WINDRES) -i winNote_private.rc --input-format=rc -o ../obj/winNote_private.res -O coff  --include-dir ../src

@@ -4,7 +4,6 @@
 
 #include <MyApp.h>
 #include <util.h>
-#include <StateEnum.h>
 #include <AppInfo.h>
 
 #define LINENUM_MARGIN_BASE 12
@@ -19,13 +18,13 @@ void updateLineNumMargin(MyApp* app) {
 	app->SendEditor(SCI_SETMARGINWIDTHN, 0, margin);
 }
 
-void updateInfo(MyApp* app) {
-	AppInfo* info = app->info;
+void updateInfo(MyApp& app) {
+	AppInfo* info = app.info;
 	info->row = util::getCurLine(app);
 	info->col = util::getCurCol(app);
-	info->pos = app->SendEditor(SCI_GETCURRENTPOS);
-	info->lineCount = app->SendEditor(EM_GETLINECOUNT);
-	info->lineLen = app->SendEditor(SCI_LINELENGTH);
+	info->pos = app.SendEditor(SCI_GETCURRENTPOS);
+	info->lineCount = app.SendEditor(EM_GETLINECOUNT);
+	info->lineLen = app.SendEditor(SCI_LINELENGTH);
 }
 
 
@@ -39,80 +38,33 @@ enum Mode {
 };
 }	//namespace
 
-
+////////////////////////////////////////////////////
 /*	Insert Mode	*/
 void MyApp::toInsertMode() {
 	mode = INSERT;
-	SendEditor(SCI_SETREADONLY, false);
-}
-
-void MyApp::InsertModeNotify(SCNotification* notification) {
-	
-	switch (notification->nmhdr.code) {
-		case SCN_CHARADDED: {
-			const char& ch = notification->ch;	
-				
-			switch(ch) {
-				case '\n': {
-					//auto indent
-					const int lineNum = util::getEndLine(this);
-					char* txt = new char[info->lineLen];
-					SendEditor(SCI_GETLINE, lineNum, reinterpret_cast<LPARAM>(txt));
-					char* p = txt;
-					while(*p==' ' || *p=='\t') {
-						++p;	
-					}
-					if(*p != '\0' && *p!='\r' && *p!='\n' && p!=txt) {
-						SendEditor(SCI_ADDTEXT, p-txt, reinterpret_cast<LPARAM>(txt));
-					}
-					if(txt) delete txt;
-				} break;
-			}
-		} break;
-	}	//switch
+	insMode.init();
 }
 
 ////////////////////////////////////////////////////
 /*	Command Mode	*/
 
-#define DEFAULT_STATE State::Start
-
-void MyApp::initState() {
-	memset(info->cmdNum, 0, sizeof(info->cmdNum));
-	toState(DEFAULT_STATE);
+void MyApp::toCommandMode() {
+	mode = COMMAND;
+	cmdMode.init();
 }
 
 int MyApp::toState(State::Func s) {
-	state = s;
-	return State::CONTINUE;
-}
-
-void MyApp::toCommandMode() {
-	mode = COMMAND;
-	SendEditor(SCI_SETREADONLY, true);	
-	this->initState();
-}
-
-
-void MyApp::CommandModeNotify(SCNotification* notification) {
-	switch(notification->nmhdr.code) {
-		case SCN_CHARADDED:
-			const int res = state(this, notification->ch);
-			switch(res) {
-				case State::SUCCESS:
-				case State::FAIL:
-					this->initState();
-					break;
-			}
-			break;
-	}
+	cmdMode.toState(s);	
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 /*	My App	*/
 #define toDefaultMode toCommandMode
 
-MyApp::MyApp() {
+MyApp::MyApp():
+	cmdMode(*this),
+	insMode(*this)
+{
 	info = new AppInfo();
 }
 
@@ -129,8 +81,10 @@ void MyApp::Process(MSG* pmsg) {
 	switch(pmsg->message) {
 		case WM_KEYDOWN	:
 			switch(pmsg->wParam) {
-				//cannot capture the esc key from Notify function in the Mode
-				//capture directory from the msg instead
+			/*
+				cannot capture the esc key from Notify function in the Mode
+				capture directory from the msg instead
+			*/
 				case VK_ESCAPE:
 					toCommandMode();
 					break;
@@ -143,14 +97,20 @@ void MyApp::Process(MSG* pmsg) {
 
 void MyApp::Notify(SCNotification *notification) {
 	Base::Notify(notification);
-	updateInfo(this);
+	updateInfo(*this);
+	
+	/*	
+		not use virutla functions for polymorphism 
+		because one virtual function cost 30 kb	
+		use enum instead
+	*/
 	switch(mode) {
 		case INSERT:
-			InsertModeNotify(notification);
+			insMode.Notify(notification);
 			break;
 			
 		case COMMAND:
-			CommandModeNotify(notification);
+			cmdMode.Notify(notification);
 			break;
 	}
 }

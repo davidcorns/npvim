@@ -5,8 +5,8 @@
 class MyApp;
 
 namespace State {
-	typedef int(*Func)(MyApp*,char);
-	int Start(MyApp* app, char ch);
+	typedef int(*Func)(MyApp&,char);
+	int Start(MyApp& app, char ch);
 }	//namespace State 
 
 	

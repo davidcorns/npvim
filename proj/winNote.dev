@@ -1,7 +1,7 @@
 [Project]
 FileName=winNote.dev
 Name=winNote
-UnitCount=14
+UnitCount=19
 Type=0
 Ver=1
 ObjFiles=
@@ -68,9 +68,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit17]
-FileName=..\src\InsertMode.h
+FileName=..\src\CommandMode.h
 CompileCpp=1
-Folder=src/Mode
+Folder=include
 Compile=1
 Link=1
 Priority=1000
@@ -78,9 +78,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit18]
-FileName=..\src\InsertMode.h
+FileName=..\src\InsertMode.cpp
 CompileCpp=1
-Folder=src/Mode
+Folder=src
 Compile=1
 Link=1
 Priority=1000
@@ -88,9 +88,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit19]
-FileName=..\src\scintilla\src\Style.h
+FileName=..\src\InsertMode.h
 CompileCpp=1
-Folder=scintilla
+Folder=include
 Compile=1
 Link=1
 Priority=1000
@@ -458,9 +458,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit15]
-FileName=..\src\AppInfo.h
+FileName=..\src\AppMode.h
 CompileCpp=1
-Folder=
+Folder=include
 Compile=1
 Link=1
 Priority=1000
@@ -480,7 +480,7 @@ BuildCmd=
 [Unit14]
 FileName=..\src\AppInfo.h
 CompileCpp=1
-Folder=src
+Folder=include
 Compile=1
 Link=1
 Priority=1000
@@ -501,6 +501,16 @@ BuildCmd=
 FileName=..\src\State.h
 CompileCpp=1
 Folder=include
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit16]
+FileName=..\src\CommandMode.cpp
+CompileCpp=1
+Folder=src
 Compile=1
 Link=1
 Priority=1000

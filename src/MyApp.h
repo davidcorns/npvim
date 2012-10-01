@@ -1,9 +1,10 @@
 #ifndef __MYAPP_H__
 #define __MYAPP_H__
 
-#include <DMApp.h>
-#include <State.h>
-#define NUM_BUF_SIZE 2
+#include "DMApp.h"
+#include "CommandMode.h"
+#include "InsertMode.h"
+#include "State.h"
 
 //forward declaration
 class AppInfo;
@@ -11,13 +12,15 @@ class AppInfo;
 
 class MyApp : public DMApp{
 	typedef DMApp Base;
-
-public:	
-	AppInfo* info;
+	
+public:
+	AppInfo* info; 
 	
 private:
+	//TODO: may move to heap in the future
+	CommandMode cmdMode;
+	InsertMode insMode;
 	int mode;
-	State::Func state;
 
 public:
 	MyApp();
@@ -31,22 +34,17 @@ public:
 	void InitialiseEditor();
 	
 	/*	Mode related functions	*/
-		//insert mode
+	//insert mode
 	void toInsertMode();
-	void InsertModeNotify(SCNotification*);
 	
-		//command mode
+	//command mode
 	void toCommandMode();
-	void CommandModeNotify(SCNotification*);
 	int toState(State::Func s);
 	
 	/*	helper functions	*/
-
 	inline void trace(char* msg) {::MessageBox(wMain, msg, msg, MB_OK);	}
 	void trace(int i);
-	
-protected:
-	void initState();
+
 	
 };	//class MyApp
 	

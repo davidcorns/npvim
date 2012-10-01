@@ -8,7 +8,7 @@ struct AppInfo {
 	int pos;
 	int lineCount;
 	int lineLen;
-	int cmdNum[NUM_BUF_SIZE];
+	int cmdNum[2];
 };
 
 
