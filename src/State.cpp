@@ -322,20 +322,20 @@ int Del(MyApp* app, char ch) {
 
 
 int DelGoto(MyApp* app, char ch) {
-	int res;
+	ScopeTempAllowEdit stae(app);
+	int& num = app->info->cmdNum[1];
+
 	switch(ch) {
 		case KEYCODE('G')+1: 
-			
+			if(num==0) num = app->info->lineCount;
 		case KEYCODE('g'):
 		{
-			const int toLine = util::min2(app->info->cmdNum[1]-1, app->info->lineCount);
-			const int curLine = app->info->row;
-			int start = util::min2(toLine, curLine);
-			int end = util::max2(toLine, curLine);
-			app->SendEditor(SCI_GOTOLINE, start);
-			for( ; start < end; ++start) {
-				//app->SendEditor(SCI_LINEDELETE);
-			}
+			app->info->cmdNum[0] = num;
+			Goto(app, 'g');
+			const int pos = app->SendEditor(SCI_GETCURRENTPOS);
+			app->SendEditor(SCI_SETSEL, app->info->pos, pos);
+			app->SendEditor(SCI_CUT);
+			app->SendEditor(SCI_LINEDELETE);
 			return SUCCESS;
 		}
 			
