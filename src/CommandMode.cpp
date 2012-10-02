@@ -25,39 +25,49 @@ enum StateReturn{
 
 //typedef
 typedef StateReturn(*Func)(StateView&,char);
+typedef bool(*SelFunc)(StateView&);
 typedef unsigned int UnsignNum;
 
 
 
 ////////////////////////////////////////////////////
 /*	State Func declaration	*/
-#define DEFINE_STATE_FUNC(func)	StateReturn func(StateView& view,char ch);
+#define DECLARE_STATE_FUNC(func)	StateReturn func(StateView& view,char ch);
 
 //GroupState
-DEFINE_STATE_FUNC(Move);
-DEFINE_STATE_FUNC(Insert);
+DECLARE_STATE_FUNC(Move);
+DECLARE_STATE_FUNC(Edit);
+DECLARE_STATE_FUNC(Insert);
+DECLARE_STATE_FUNC(Undo);
 
 //Command Mode State that can be toState
-DEFINE_STATE_FUNC(Start);
-DEFINE_STATE_FUNC(Goto);
-DEFINE_STATE_FUNC(Find);
-DEFINE_STATE_FUNC(FindBack);
-DEFINE_STATE_FUNC(Till);
-DEFINE_STATE_FUNC(TillBack);
+DECLARE_STATE_FUNC(Start);
+DECLARE_STATE_FUNC(Goto);
+DECLARE_STATE_FUNC(Find);
+DECLARE_STATE_FUNC(FindBack);
+DECLARE_STATE_FUNC(Till);
+DECLARE_STATE_FUNC(TillBack);
 
+////////////////////////////////////////////////////
+/*	Sel Func declaration	*/
+#define DECLARE_SEL_FUNC(func)	bool func(StateView& view);
 
+DECLARE_SEL_FUNC(ClearSel);
+DECLARE_SEL_FUNC(DelSel);
+DECLARE_SEL_FUNC(ReplaceSel);
+DECLARE_SEL_FUNC(CopySel);
 
 ////////////////////////////////////////////////////
 /*	StateView declaration & defination	*/
 class StateView {
-	Func curState;
+	Func curState;		//the function pointer which the function is to perform actoin base on the char input
+	SelFunc selFunc;	//the function pointer which the function is for muliplate the selection
 	MyApp& app;
 	
 public:
 	struct NumCache {
 		UnsignNum 	tmp,
-					edit,
-					move;
+					edit;
 	} num;
 	
 	const AppInfo& info;
@@ -68,11 +78,11 @@ public:
 	
 	void initNum() {
 		num.tmp = 0;
-		num.edit = num.move = 1;
+		num.edit = 1;
 	}
 	
 	inline UnsignNum getNum() {
-		return num.edit * num.move;
+		return num.edit * num.tmp;
 	}
 	
 	inline bool toInsertMode() {
@@ -85,7 +95,12 @@ public:
 	}
 
 	inline StateReturn toState(State::Func s) { 
-		curState = s; 
+		this->curState = s; 
+		return CONTINUE;
+	}
+	
+	inline StateReturn setSelFunc(State::SelFunc p) {
+		this->selFunc = p;
 		return CONTINUE;
 	}
 	
@@ -108,6 +123,7 @@ StateView::StateView(MyApp& a):
 void StateView::init() {
 	initNum();
 	toState(Start);
+	setSelFunc(ClearSel);
 }
 
 ////////////////////////////////////////////////////
@@ -122,12 +138,11 @@ public:
 
 
 ////////////////////////////////////////////////////
-#define KEYCODE(x)	x
+/*	State Func defination	*/
 
+#define KEYCODE(x)	x
 #define LOOP(num)	for(int _i=0;_i<num;++_i)
 
-
-/*	State Func defination	*/
 StateReturn Start(StateView& view,char ch) {
 	//reading number
 	UnsignNum& num = view.num.tmp;
@@ -142,18 +157,18 @@ StateReturn Start(StateView& view,char ch) {
 		num += ch-'0';
 		return CONTINUE;
 	}
+	if(num == 0) ++num;
 	
 	StateReturn st;
 	st = Insert(view, ch);				if(st != FAIL) return st;
-	
-	view.num.move = util::max2(1U, num);
 	st = Move(view, ch);				if(st != FAIL) return st;
+	st = Edit(view, ch);				if(st != FAIL) return st;
+	st = Undo(view, ch);				if(st != FAIL) return st;
 	
 	return FAIL;
 }
 
 StateReturn Move(StateView& view,char ch) {
-	
 	const int lineStartPos = view.execute(SCI_POSITIONFROMLINE, view.info.row);
 	const int num = view.getNum();
 	
@@ -180,6 +195,7 @@ StateReturn Move(StateView& view,char ch) {
 			break;
 			
 		case KEYCODE('e'):
+			view.execute(SCI_CLEARSELECTIONS);
 			break;
 			
 		case KEYCODE('w'):
@@ -333,6 +349,46 @@ StateReturn Insert(StateView& view, char ch) {
 	return view.toInsertMode() ? SUCCESS : FAIL;
 }
 
+StateReturn Edit(StateView& view, char ch) {
+	switch(ch) {
+		case KEYCODE('d'):
+			view.setSelFunc(DelSel);
+			break;
+			
+		default:
+			return FAIL;
+	}
+	
+	view.num.edit = view.num.tmp;
+	view.num.tmp = 0;
+	return CONTINUE;
+}
+
+
+StateReturn Undo(StateView& view, char ch) {
+	if(ch != KEYCODE('u')) return FAIL;
+	ScopeTempAllowEdit stae(view);
+	for(int i=0; i<view.getNum(); ++i) {
+		view.execute(SCI_UNDO);
+	}
+	return SUCCESS;
+}
+
+////////////////////////////////////////////////////
+/*	Post Func defination	*/
+bool ClearSel(StateView& view) {
+	return view.execute(SCI_CLEARSELECTIONS) == 0;
+}
+
+bool ReplaceSel(StateView& view) {
+	return true;
+}
+
+bool DelSel(StateView& view) {
+	ScopeTempAllowEdit stae(view);
+	view.execute(SCI_CUT);
+	return true;
+}
 
 }	//namespace State
 
@@ -350,15 +406,17 @@ CommandMode::~CommandMode() {
 
 
 void CommandMode::Notify(SCNotification* notification) {
-	switch(notification->nmhdr.code) {
-		case SCN_CHARADDED:
-			switch(sv->curState(*sv, notification->ch)) {
-				case State::SUCCESS:
-				case State::FAIL:
-					sv->init();
-					break;
-			}
-			break;
+	if(notification->nmhdr.code != SCN_CHARADDED) return;
+	const int oldPos = app.getInfo().pos;
+	
+	switch(sv->curState(*sv, notification->ch)) {
+		case State::SUCCESS:
+			app.SendEditor(SCI_SETANCHOR, oldPos);		//select the movement
+			sv->selFunc(*sv);							//muliplate the selection
+			app.SendEditor(SCI_GOTOPOS, app.getInfo().pos);
+		
+		case State::FAIL:
+			sv->init();
 	}
 }
 

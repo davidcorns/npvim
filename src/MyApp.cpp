@@ -9,7 +9,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /*	helper functions of MyApp	*/
 
-void updateLineNumMargin(MyApp& app) {
+inline void updateLineNumMargin(MyApp& app) {
 	//this block of code is copied from notepad++
 	int linesVisible = (int) app.SendEditor(SCI_LINESONSCREEN);
 	if (linesVisible)
@@ -30,7 +30,7 @@ void updateLineNumMargin(MyApp& app) {
 	}
 }
 
-void updateInfo(MyApp& app) {
+inline void updateInfo(MyApp& app) {
 	AppInfo* info = app.info;
 	info->row = util::getCurLine(app);
 	info->col = util::getCurCol(app);
