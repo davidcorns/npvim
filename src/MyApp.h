@@ -4,7 +4,6 @@
 #include "DMApp.h"
 #include "CommandMode.h"
 #include "InsertMode.h"
-#include "State.h"
 
 //forward declaration
 class AppInfo;
@@ -12,11 +11,10 @@ class AppInfo;
 
 class MyApp : public DMApp{
 	typedef DMApp Base;
-	
-public:
-	AppInfo* info; 
-	
+
 private:
+	AppInfo* info;
+	
 	//TODO: may move to heap in the future
 	CommandMode cmdMode;
 	InsertMode insMode;
@@ -39,12 +37,9 @@ public:
 	
 	//command mode
 	void toCommandMode();
-	int toState(State::Func s);
 	
-	/*	helper functions	*/
-	inline void trace(char* msg) {::MessageBox(wMain, msg, msg, MB_OK);	}
-	void trace(int i);
-
+	/*	info	*/
+	inline const AppInfo& getInfo() { return *info; }
 	
 };	//class MyApp
 	

@@ -8,7 +8,6 @@ struct AppInfo {
 	int pos;
 	int lineCount;
 	int lineLen;
-	int cmdNum[2];
 };
 
 

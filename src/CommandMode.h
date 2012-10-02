@@ -3,13 +3,16 @@
 
 
 #include "AppMode.h"
-#include <State.h>
+
+namespace State {
+	class StateView; 
+}	//namespace State
 
 class CommandMode :public AppMode {
 	typedef AppMode Base;
 	
 private:
-	State::Func state;
+	State::StateView* sv;
 	
 public:
 	CommandMode(MyApp& app);
@@ -17,10 +20,7 @@ public:
 	
 	void Notify(SCNotification* notification);
 	void init();
-	int toState(State::Func s);
-	
-private:
-	void initState();
+
 	
 };	//class CommandMode
 	

@@ -1,10 +1,7 @@
-#include <cstdio>
-#include <math.h>
 #include <resource.h>
-
-#include <MyApp.h>
-#include <util.h>
-#include <AppInfo.h>
+#include "MyApp.h"
+#include "util.h"
+#include "AppInfo.h"
 
 #define LINENUM_MARGIN_BASE 12
 
@@ -12,10 +9,25 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /*	helper functions of MyApp	*/
 
-void updateLineNumMargin(MyApp* app) {
-	//line number margin auto adjust
-	const int margin = int(1 + log10(app->info->lineCount)) * LINENUM_MARGIN_BASE;
-	app->SendEditor(SCI_SETMARGINWIDTHN, 0, margin);
+void updateLineNumMargin(MyApp& app) {
+	//this block of code is copied from notepad++
+	int linesVisible = (int) app.SendEditor(SCI_LINESONSCREEN);
+	if (linesVisible)
+	{
+		int firstVisibleLineVis = (int) app.SendEditor(SCI_GETFIRSTVISIBLELINE);
+		int lastVisibleLineVis = linesVisible + firstVisibleLineVis + 1;
+		int i = 0;
+		while (lastVisibleLineVis)
+		{
+			lastVisibleLineVis /= 10;
+			i++;
+		}
+		i = util::max2(i, 3);
+		{
+			int pixelWidth = int(8 + i * app.SendEditor(SCI_TEXTWIDTH, STYLE_LINENUMBER, (LPARAM)"8"));
+			app.SendEditor(SCI_SETMARGINWIDTHN, 0, pixelWidth);
+		}
+	}
 }
 
 void updateInfo(MyApp& app) {
@@ -53,19 +65,16 @@ void MyApp::toCommandMode() {
 	cmdMode.init();
 }
 
-int MyApp::toState(State::Func s) {
-	cmdMode.toState(s);	
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 /*	My App	*/
 #define toDefaultMode toCommandMode
 
 MyApp::MyApp():
+	info(new AppInfo()),
 	cmdMode(*this),
 	insMode(*this)
 {
-	info = new AppInfo();
 }
 
 
@@ -91,7 +100,7 @@ void MyApp::Process(MSG* pmsg) {
 			}
 	}
 	
-	updateLineNumMargin(this);
+	updateLineNumMargin(*this);
 }
 
 
@@ -135,14 +144,8 @@ void MyApp::Command(int id) {
 void MyApp::InitialiseEditor() {
 	Base::InitialiseEditor();
 	SendEditor(SCI_SETMARGINWIDTHN, 0, LINENUM_MARGIN_BASE);	//shows line numbers
-	//SendEditor(SCI_SETMARGINWIDTHN, 1, 30);					//shows symbols
 	toDefaultMode();
 }
 
-
-
-void MyApp::trace(int i) {
-  char msg[256]; sprintf(msg, "%i", i); trace(msg);
-}
 
 
