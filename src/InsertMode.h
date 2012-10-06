@@ -1,7 +1,7 @@
 #ifndef __INSERTMODE_H__
 #define __INSERTMODE_H__
 
-#include "AppMode.h"
+#include <AppMode.h>
 
 class InsertMode : public AppMode {
 	typedef AppMode Base;

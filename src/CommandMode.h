@@ -2,7 +2,7 @@
 #define __COMMANDMODE_H__
 
 
-#include "AppMode.h"
+#include <AppMode.h>
 
 namespace State {
 	class StateView; 

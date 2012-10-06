@@ -1,9 +1,9 @@
 #ifndef __MYAPP_H__
 #define __MYAPP_H__
 
-#include "DMApp.h"
-#include "CommandMode.h"
-#include "InsertMode.h"
+#include <DMApp.h>
+#include <CommandMode.h>
+#include <InsertMode.h>
 
 //forward declaration
 class AppInfo;

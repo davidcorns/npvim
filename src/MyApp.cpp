@@ -1,7 +1,8 @@
 #include <resource.h>
-#include "MyApp.h"
-#include "util.h"
-#include "AppInfo.h"
+#include <MyApp.h>
+#include <AppInfo.h>
+#include <util/math.h>
+#include <util/app.h>
 
 #define LINENUM_MARGIN_BASE 12
 

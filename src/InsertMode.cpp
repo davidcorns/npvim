@@ -1,10 +1,10 @@
 #include <include/Scintilla.h>
 
-#include "MyApp.h"
-#include "AppInfo.h"
+#include <MyApp.h>
+#include <AppInfo.h>
 
-#include "InsertMode.h"
-#include "util.h"
+#include <InsertMode.h>
+#include <util/App.h>
 
 InsertMode::InsertMode(MyApp& app) : Base(app) {
 

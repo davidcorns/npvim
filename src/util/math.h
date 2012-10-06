@@ -1,12 +1,7 @@
-#ifndef __UTIL_H__
-#define __UTIL_H__
-
-class DMApp;
+#ifndef __UTIL_MATH_H__
+#define __UTIL_MATH_H__
 
 namespace util {
-	int getEndLine(DMApp& app);
-	int getCurLine(DMApp& app);
-	int getCurCol(DMApp& app);
 	
 	inline bool isDigit(char ch) {
 		return ch >= '0' && ch <= '9';
@@ -26,9 +21,7 @@ namespace util {
 		return a<b?a:b;
 	}
 
-	
 } //namespace util
-
 	
-#endif	//__UTIL_H__
+#endif	//__UTIL_MATH_H__
 

@@ -1,10 +1,12 @@
 #include <include/Scintilla.h>
+#include <stack>
 
-#include "MyApp.h"
-#include "AppInfo.h"
+#include <MyApp.h>
+#include <AppInfo.h>
 
-#include "CommandMode.h"
-#include "util.h"
+#include <CommandMode.h>
+#include <util/app.h>
+#include <util/math.h>
 
 #include <cstdio>	//for trace
 
@@ -25,7 +27,7 @@ enum StateReturn{
 
 //typedef
 typedef StateReturn(*Func)(StateView&,char);
-typedef bool(*SelFunc)(StateView&);
+typedef bool(*PostFunc)(StateView&);
 typedef unsigned int UnsignNum;
 
 
@@ -50,18 +52,18 @@ DECLARE_STATE_FUNC(TillBack);
 
 ////////////////////////////////////////////////////
 /*	Sel Func declaration	*/
-#define DECLARE_SEL_FUNC(func)	bool func(StateView& view);
+#define DECLARE_POST_FUNC(func)	bool func(StateView& view);
 
-DECLARE_SEL_FUNC(ClearSel);
-DECLARE_SEL_FUNC(DelSel);
-DECLARE_SEL_FUNC(ReplaceSel);
-DECLARE_SEL_FUNC(CopySel);
+DECLARE_POST_FUNC(doNothing);
+DECLARE_POST_FUNC(SelDel);
+DECLARE_POST_FUNC(ReplaceSel);
+DECLARE_POST_FUNC(CopySel);
 
 ////////////////////////////////////////////////////
 /*	StateView declaration & defination	*/
 class StateView {
 	Func curState;		//the function pointer which the function is to perform actoin base on the char input
-	SelFunc selFunc;	//the function pointer which the function is for muliplate the selection
+	PostFunc postFunc;	//the function pointer which the function is for muliplate the selection
 	MyApp& app;
 	
 public:
@@ -99,8 +101,8 @@ public:
 		return CONTINUE;
 	}
 	
-	inline StateReturn setSelFunc(State::SelFunc p) {
-		this->selFunc = p;
+	inline StateReturn setPostFunc(State::PostFunc p) {
+		this->postFunc = p;
 		return CONTINUE;
 	}
 	
@@ -123,7 +125,7 @@ StateView::StateView(MyApp& a):
 void StateView::init() {
 	initNum();
 	toState(Start);
-	setSelFunc(ClearSel);
+	setPostFunc(doNothing);
 }
 
 ////////////////////////////////////////////////////
@@ -352,7 +354,7 @@ StateReturn Insert(StateView& view, char ch) {
 StateReturn Edit(StateView& view, char ch) {
 	switch(ch) {
 		case KEYCODE('d'):
-			view.setSelFunc(DelSel);
+			view.setPostFunc(SelDel);
 			break;
 			
 		default:
@@ -376,7 +378,7 @@ StateReturn Undo(StateView& view, char ch) {
 
 ////////////////////////////////////////////////////
 /*	Post Func defination	*/
-bool ClearSel(StateView& view) {
+bool doNothing(StateView& view) {
 	return view.execute(SCI_CLEARSELECTIONS) == 0;
 }
 
@@ -384,7 +386,7 @@ bool ReplaceSel(StateView& view) {
 	return true;
 }
 
-bool DelSel(StateView& view) {
+bool SelDel(StateView& view) {
 	ScopeTempAllowEdit stae(view);
 	view.execute(SCI_CUT);
 	return true;
@@ -411,9 +413,7 @@ void CommandMode::Notify(SCNotification* notification) {
 	
 	switch(sv->curState(*sv, notification->ch)) {
 		case State::SUCCESS:
-			app.SendEditor(SCI_SETANCHOR, oldPos);		//select the movement
-			sv->selFunc(*sv);							//muliplate the selection
-			app.SendEditor(SCI_GOTOPOS, app.getInfo().pos);
+			sv->postFunc(*sv);							//muliplate the selection
 		
 		case State::FAIL:
 			sv->init();
