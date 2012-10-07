@@ -508,7 +508,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit18]
-FileName=..\src\util\IncStack.h
+FileName=..\src\util\CycleStack.h
 CompileCpp=1
 Folder=util
 Compile=1

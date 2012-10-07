@@ -28,7 +28,7 @@ enum StateReturn{
 
 //typedef
 typedef StateReturn(*StateFunc)(StateView&,char);
-typedef StateReturn(*StateWrapper)(StateFunc&,StateView&,char);
+typedef void(*PostFunc)(StateView&,StateReturn);
 typedef unsigned int UnsignNum;
 
 
@@ -53,17 +53,17 @@ DECLARE_STATE_FUNC(TillBack);
 
 ////////////////////////////////////////////////////
 /*	Sel StateFunc declaration	*/
-#define DECLARE_STATE_WRAPPER(func)	StateReturn func(StateFunc&,StateView&,char);
+#define DECLARE_POST_STATE(func)	void func(StateView&, StateReturn);
 
-DECLARE_STATE_WRAPPER(NotWrapper);
-DECLARE_STATE_WRAPPER(DelWrapper);
+DECLARE_POST_STATE(PostNone);
+DECLARE_POST_STATE(PostDel);
 
 
 ////////////////////////////////////////////////////
 /*	StateView declaration & defination	*/
 class StateView {
 	StateFunc curState;		//the function pointer which the function is to perform actoin base on the char input
-	StateWrapper curWrapper;	//the function pointer which the function is for muliplate the selection
+	PostFunc curPost;	//the function pointer which the function is for muliplate the selection
 	MyApp& app;
 	util::CycleStack<int> posStack;
 	
@@ -84,8 +84,12 @@ public:
 		num.edit = 1;
 	}
 	
-	inline UnsignNum getNum() {
+	inline UnsignNum getNum() const {
 		return num.edit * num.tmp;
+	}
+	
+	inline int lastPos(int pre=1) {
+		return posStack.top(pre);
 	}
 	
 	inline bool toInsertMode() {
@@ -102,14 +106,14 @@ public:
 		return CONTINUE;
 	}
 	
-	inline StateReturn toWrapper(State::StateWrapper p) {
-		this->curWrapper = p;
+	inline StateReturn setPostFunc(State::PostFunc p) {
+		this->curPost = p;
 		return CONTINUE;
 	}
 	
 	//TODO: will be removed
-	inline void trace(char* msg) {::MessageBox(app.wMain, msg, msg, MB_OK);	}
-	void trace(int i) {	
+	inline void trace(char* msg) const {::MessageBox(app.wMain, msg, msg, MB_OK);	}
+	void trace(int i) const {	
 		char msg[256]; sprintf(msg, "%i", i); trace(msg);
 	}
 	
@@ -126,7 +130,7 @@ StateView::StateView(MyApp& a):
 void StateView::init() {
 	initNum();
 	toState(Start);
-	toWrapper(NotWrapper);
+	setPostFunc(PostNone);
 }
 
 ////////////////////////////////////////////////////
@@ -321,6 +325,7 @@ StateReturn TillBack(StateView& view, char ch) {
 
 StateReturn Insert(StateView& view, char ch) {
 	int row = view.info.row;
+	const int lineEndPos = view.execute(SCI_GETLINEENDPOSITION, row);	
 	
 	switch(ch) {	
 		case KEYCODE('A'):
@@ -329,6 +334,11 @@ StateReturn Insert(StateView& view, char ch) {
 
 		case KEYCODE('I'):
 			view.execute(SCI_HOME);
+			break;
+
+		case KEYCODE('a'):
+			if(view.info.pos < lineEndPos)
+				view.execute(SCI_CHARRIGHT);
 			break;
 
 		case KEYCODE('i'):
@@ -355,7 +365,7 @@ StateReturn Insert(StateView& view, char ch) {
 StateReturn Edit(StateView& view, char ch) {
 	switch(ch) {
 		case KEYCODE('d'):
-			view.toWrapper(DelWrapper);
+			view.setPostFunc(PostDel);
 			break;
 			
 		default:
@@ -378,14 +388,14 @@ StateReturn Undo(StateView& view, char ch) {
 }
 
 ////////////////////////////////////////////////////
-/*	State Wrapper defination	*/
-StateReturn NotWrapper(StateFunc& state, StateView& view, char ch) {
-	return state(view, ch);
+/*	Post State Func defination	*/
+void PostNone(StateView&,StateReturn) {
 }
 
-StateReturn DelWrapper(StateFunc& state, StateView& view, char ch) {
-	
-	return state(view, ch);
+void PostDel(StateView& view, StateReturn res) {
+	ScopeTempAllowEdit stae(view);
+	view.execute(SCI_SETANCHOR, view.lastPos());
+	view.execute(SCI_CUT);
 }
 
 }	//namespace State
@@ -411,9 +421,10 @@ void CommandMode::Notify(SCNotification* notification) {
 	if(pos != sv->posStack.top()) sv->posStack.push(pos);
 	
 	//execute the state func
-	State::StateReturn res = sv->curWrapper(sv->curState, *sv, notification->ch);
+	const State::StateReturn res = sv->curState(*sv, notification->ch);
 	switch(res) {
 		case State::SUCCESS:
+			sv->curPost(*sv, res);
 		case State::FAIL:
 			sv->init();
 	}

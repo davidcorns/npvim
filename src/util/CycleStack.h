@@ -19,6 +19,7 @@ public:
 	}
 	
 	T top() const { return _a[_cur]; }
+	T top(int pre) const { return _a[(_cur+STACK_SIZE-pre)%STACK_SIZE]; }
 	
 };	//class CycleStack
 
