@@ -8,6 +8,7 @@
 #include <util/app.h>
 #include <util/math.h>
 
+#include <util/IncStack.h>
 #include <cstdio>	//for trace
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,15 +27,15 @@ enum StateReturn{
 };
 
 //typedef
-typedef StateReturn(*Func)(StateView&,char);
-typedef bool(*PostFunc)(StateView&);
+typedef StateReturn(*StateFunc)(StateView&,char);
+typedef StateReturn(*StateWrapper)(StateFunc&,StateView&,char);
 typedef unsigned int UnsignNum;
 
 
 
 ////////////////////////////////////////////////////
-/*	State Func declaration	*/
-#define DECLARE_STATE_FUNC(func)	StateReturn func(StateView& view,char ch);
+/*	State StateFunc declaration	*/
+#define DECLARE_STATE_FUNC(func)	StateReturn func(StateView&, char);
 
 //GroupState
 DECLARE_STATE_FUNC(Move);
@@ -51,20 +52,20 @@ DECLARE_STATE_FUNC(Till);
 DECLARE_STATE_FUNC(TillBack);
 
 ////////////////////////////////////////////////////
-/*	Sel Func declaration	*/
-#define DECLARE_POST_FUNC(func)	bool func(StateView& view);
+/*	Sel StateFunc declaration	*/
+#define DECLARE_STATE_WRAPPER(func)	StateReturn func(StateFunc&,StateView&,char);
 
-DECLARE_POST_FUNC(doNothing);
-DECLARE_POST_FUNC(SelDel);
-DECLARE_POST_FUNC(ReplaceSel);
-DECLARE_POST_FUNC(CopySel);
+DECLARE_STATE_WRAPPER(NotWrapper);
+DECLARE_STATE_WRAPPER(DelWrapper);
+
 
 ////////////////////////////////////////////////////
 /*	StateView declaration & defination	*/
 class StateView {
-	Func curState;		//the function pointer which the function is to perform actoin base on the char input
-	PostFunc postFunc;	//the function pointer which the function is for muliplate the selection
+	StateFunc curState;		//the function pointer which the function is to perform actoin base on the char input
+	StateWrapper curWrapper;	//the function pointer which the function is for muliplate the selection
 	MyApp& app;
+	util::IncStack<int> posStack;
 	
 public:
 	struct NumCache {
@@ -96,13 +97,13 @@ public:
 		return ::SendMessage(app.wEditor, Msg, wParam, lParam);
 	}
 
-	inline StateReturn toState(State::Func s) { 
+	inline StateReturn toState(State::StateFunc s) { 
 		this->curState = s; 
 		return CONTINUE;
 	}
 	
-	inline StateReturn setPostFunc(State::PostFunc p) {
-		this->postFunc = p;
+	inline StateReturn toWrapper(State::StateWrapper p) {
+		this->curWrapper = p;
 		return CONTINUE;
 	}
 	
@@ -125,7 +126,7 @@ StateView::StateView(MyApp& a):
 void StateView::init() {
 	initNum();
 	toState(Start);
-	setPostFunc(doNothing);
+	toWrapper(NotWrapper);
 }
 
 ////////////////////////////////////////////////////
@@ -140,7 +141,7 @@ public:
 
 
 ////////////////////////////////////////////////////
-/*	State Func defination	*/
+/*	StateFunc defination	*/
 
 #define KEYCODE(x)	x
 #define LOOP(num)	for(int _i=0;_i<num;++_i)
@@ -354,7 +355,7 @@ StateReturn Insert(StateView& view, char ch) {
 StateReturn Edit(StateView& view, char ch) {
 	switch(ch) {
 		case KEYCODE('d'):
-			view.setPostFunc(SelDel);
+			view.toWrapper(DelWrapper);
 			break;
 			
 		default:
@@ -377,19 +378,13 @@ StateReturn Undo(StateView& view, char ch) {
 }
 
 ////////////////////////////////////////////////////
-/*	Post Func defination	*/
-bool doNothing(StateView& view) {
-	return view.execute(SCI_CLEARSELECTIONS) == 0;
+/*	State Wrapper defination	*/
+StateReturn NotWrapper(StateFunc& state, StateView& view, char ch) {
+	return state(view, ch);
 }
 
-bool ReplaceSel(StateView& view) {
-	return true;
-}
-
-bool SelDel(StateView& view) {
-	ScopeTempAllowEdit stae(view);
-	view.execute(SCI_CUT);
-	return true;
+StateReturn DelWrapper(StateFunc& state, StateView& view, char ch) {
+	return state(view, ch);
 }
 
 }	//namespace State
@@ -409,12 +404,15 @@ CommandMode::~CommandMode() {
 
 void CommandMode::Notify(SCNotification* notification) {
 	if(notification->nmhdr.code != SCN_CHARADDED) return;
-	const int oldPos = app.getInfo().pos;
 	
-	switch(sv->curState(*sv, notification->ch)) {
+	//push the pos to stack
+	const int& pos = app.getInfo().pos;
+	if(pos != sv->posStack.top()) sv->posStack.push(pos);
+	
+	//execute the state func
+	State::StateReturn res = sv->curWrapper(sv->curState, *sv, notification->ch);
+	switch(res) {
 		case State::SUCCESS:
-			sv->postFunc(*sv);							//muliplate the selection
-		
 		case State::FAIL:
 			sv->init();
 	}
@@ -423,6 +421,5 @@ void CommandMode::Notify(SCNotification* notification) {
 void CommandMode::init() {
 	app.SendEditor(SCI_SETREADONLY, true);	
 }
-
 
 
