@@ -8,7 +8,7 @@
 #include <util/app.h>
 #include <util/math.h>
 
-#include <util/IncStack.h>
+#include <util/CycleStack.h>
 #include <cstdio>	//for trace
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -65,7 +65,7 @@ class StateView {
 	StateFunc curState;		//the function pointer which the function is to perform actoin base on the char input
 	StateWrapper curWrapper;	//the function pointer which the function is for muliplate the selection
 	MyApp& app;
-	util::IncStack<int> posStack;
+	util::CycleStack<int> posStack;
 	
 public:
 	struct NumCache {
@@ -384,6 +384,7 @@ StateReturn NotWrapper(StateFunc& state, StateView& view, char ch) {
 }
 
 StateReturn DelWrapper(StateFunc& state, StateView& view, char ch) {
+	
 	return state(view, ch);
 }
 

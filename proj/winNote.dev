@@ -1,7 +1,7 @@
 [Project]
 FileName=winNote.dev
 Name=winNote
-UnitCount=19
+UnitCount=18
 Type=0
 Ver=1
 ObjFiles=
@@ -63,16 +63,6 @@ CompileCpp=1
 Folder=res
 Compile=1
 Link=0
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit18]
-FileName=..\src\util\IncStack.cpp
-CompileCpp=1
-Folder=util
-Compile=1
-Link=1
 Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
@@ -509,6 +499,16 @@ BuildCmd=
 
 [Unit16]
 FileName=..\src\util\app.h
+CompileCpp=1
+Folder=util
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit18]
+FileName=..\src\util\IncStack.h
 CompileCpp=1
 Folder=util
 Compile=1
