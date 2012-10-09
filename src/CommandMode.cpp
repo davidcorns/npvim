@@ -9,7 +9,7 @@
 #include <util/math.h>
 
 #include <util/CycleStack.h>
-#include <cstdio>	//for trace
+#include <debug.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /*	CommandMode::StateView	*/
@@ -62,8 +62,9 @@ DECLARE_POST_STATE(PostDel);
 ////////////////////////////////////////////////////
 /*	StateView declaration & defination	*/
 class StateView {
+private:
 	StateFunc curState;		//the function pointer which the function is to perform actoin base on the char input
-	PostFunc curPost;	//the function pointer which the function is for muliplate the selection
+	PostFunc curPost;		//the function pointer which the function is for muliplate the selection
 	MyApp& app;
 	util::CycleStack<int> posStack;
 	
@@ -88,8 +89,12 @@ public:
 		return num.edit * num.tmp;
 	}
 	
-	inline int lastPos(int pre=1) {
+	inline int lastPos(int pre=1) const {
 		return posStack.top(pre);
+	}
+	
+	inline void pushPos(int pos) {
+		posStack.push(pos);
 	}
 	
 	inline bool toInsertMode() {
@@ -109,12 +114,6 @@ public:
 	inline StateReturn setPostFunc(State::PostFunc p) {
 		this->curPost = p;
 		return CONTINUE;
-	}
-	
-	//TODO: will be removed
-	inline void trace(char* msg) const {::MessageBox(app.wMain, msg, msg, MB_OK);	}
-	void trace(int i) const {	
-		char msg[256]; sprintf(msg, "%i", i); trace(msg);
 	}
 	
 };	//class CommandMode::StateView
@@ -148,7 +147,6 @@ public:
 /*	StateFunc defination	*/
 
 #define KEYCODE(x)	x
-#define LOOP(num)	for(int _i=0;_i<num;++_i)
 
 StateReturn Start(StateView& view,char ch) {
 	//reading number
@@ -196,50 +194,33 @@ StateReturn Move(StateView& view,char ch) {
 
 		/*	Word Jump	*/
 		case KEYCODE('b'):
-			LOOP(num) {
-				view.execute(SCI_WORDLEFT);
-			}
+			view.execute(SCI_WORDLEFT);
 			break;
-			
-		case KEYCODE('e'):
-			view.execute(SCI_CLEARSELECTIONS);
-			break;
-			
+
 		case KEYCODE('w'):
-			LOOP(num) {
-				view.execute(SCI_WORDRIGHT);
-			}
+			view.execute(SCI_WORDRIGHT);
 			break;
 			
 		/*	Arrow Move	*/
 		case KEYCODE('h'):
-			LOOP(num) {
-				if(view.info.pos <= lineStartPos) return FAIL;
-				view.execute(SCI_CHARLEFT);
-			}
+			view.execute(SCI_GOTOPOS, util::max2(view.info.pos-num, lineStartPos));
 			break;
 		
 		case KEYCODE('j'): {
-			LOOP(num) {
-				if(view.info.row >= view.info.lineCount-1) return FAIL;
-				view.execute(SCI_LINEDOWN);
-			}
+			if(view.info.row >= view.info.lineCount-1) return FAIL;
+			view.execute(SCI_LINEDOWN);
 		} break;
 			
 		case KEYCODE('k'): 
-			LOOP(num) {
-				if(view.info.row == 0) return FAIL;
-				view.execute(SCI_LINEUP);
-			}
+			if(view.info.row == 0) return FAIL;
+			view.execute(SCI_LINEUP);
 			break;
 		
 		case KEYCODE('l'): {
 			//the vi cursor cannot move over the line end, thus -1
 			const int lineEndPos = view.execute(SCI_GETLINEENDPOSITION, view.info.row) - 1;	
-			LOOP(num) {
-				if(view.info.pos >= lineEndPos) return FAIL;
-				view.execute(SCI_CHARRIGHT);
-			}
+			const int toPos = util::min2(view.info.pos+num, lineEndPos);
+			view.execute(SCI_GOTOPOS, toPos);
 		} break;
 		
 		/*	Goto	*/
@@ -405,6 +386,7 @@ void PostDel(StateView& view, StateReturn res) {
 
 CommandMode::CommandMode(MyApp& app): Base(app) {
 	sv = new State::StateView(app);
+	sv->posStack.push(0);
 }
 
 
@@ -414,11 +396,15 @@ CommandMode::~CommandMode() {
 
 
 void CommandMode::Notify(SCNotification* notification) {
-	if(notification->nmhdr.code != SCN_CHARADDED) return;
-	
 	//push the pos to stack
 	const int& pos = app.getInfo().pos;
-	if(pos != sv->posStack.top()) sv->posStack.push(pos);
+	if(pos != sv->lastPos()) {
+		sv->pushPos(pos);
+		debug::log(sv->lastPos());
+	}
+
+	
+	if(notification->nmhdr.code != SCN_CHARADDED) return;
 	
 	//execute the state func
 	const State::StateReturn res = sv->curState(*sv, notification->ch);
@@ -426,6 +412,7 @@ void CommandMode::Notify(SCNotification* notification) {
 		case State::SUCCESS:
 			sv->curPost(*sv, res);
 		case State::FAIL:
+			//init the state view
 			sv->init();
 	}
 }

@@ -1,7 +1,7 @@
 [Project]
 FileName=winNote.dev
 Name=winNote
-UnitCount=18
+UnitCount=20
 Type=0
 Ver=1
 ObjFiles=
@@ -68,9 +68,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit19]
-FileName=..\src\util\IncStack.h
+FileName=..\src\debug.h
 CompileCpp=1
-Folder=util
+Folder=include
 Compile=1
 Link=1
 Priority=1000
@@ -78,9 +78,9 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit20]
-FileName=..\src\scintilla\src\SVector.h
+FileName=..\src\debug.cpp
 CompileCpp=1
-Folder=scintilla
+Folder=src
 Compile=1
 Link=1
 Priority=1000
