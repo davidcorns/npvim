@@ -32,12 +32,12 @@ inline void updateLineNumMargin(MyApp& app) {
 }
 
 inline void updateInfo(MyApp& app) {
-	AppInfo* info = app.info;
-	info->row = util::getCurLine(app);
-	info->col = util::getCurCol(app);
-	info->pos = app.SendEditor(SCI_GETCURRENTPOS);
-	info->lineCount = app.SendEditor(EM_GETLINECOUNT);
-	info->lineLen = app.SendEditor(SCI_LINELENGTH);
+	AppInfo& info = *app.info;
+	info.row = util::getCurLine(app);
+	info.col = util::getCurCol(app);
+	info.pos = app.SendEditor(SCI_GETCURRENTPOS);
+	info.lineCount = app.SendEditor(EM_GETLINECOUNT);
+	info.lineLen = app.SendEditor(SCI_LINELENGTH);
 }
 
 

@@ -50,6 +50,9 @@ DECLARE_STATE_FUNC(Find);
 DECLARE_STATE_FUNC(FindBack);
 DECLARE_STATE_FUNC(Till);
 DECLARE_STATE_FUNC(TillBack);
+DECLARE_STATE_FUNC(VMove);
+DECLARE_STATE_FUNC(Replace);
+
 
 ////////////////////////////////////////////////////
 /*	Sel StateFunc declaration	*/
@@ -57,7 +60,7 @@ DECLARE_STATE_FUNC(TillBack);
 
 DECLARE_POST_STATE(PostNone);
 DECLARE_POST_STATE(PostDel);
-
+DECLARE_POST_STATE(PostSel);
 
 ////////////////////////////////////////////////////
 /*	StateView declaration & defination	*/
@@ -75,6 +78,8 @@ public:
 	} num;
 	
 	const AppInfo& info;
+	int lastCol;
+	int startCmdPos;
 
 public:
 	StateView(MyApp& a);
@@ -143,6 +148,14 @@ public:
 };
 
 
+inline int getLineEndPos(StateView& view) {
+	return view.execute(SCI_GETLINEENDPOSITION, view.info.row) - 1;	
+}
+
+inline int getLineStartPos(StateView& view) {
+	return view.execute(SCI_POSITIONFROMLINE, view.info.row);
+}
+
 ////////////////////////////////////////////////////
 /*	StateFunc defination	*/
 
@@ -169,12 +182,11 @@ StateReturn Start(StateView& view,char ch) {
 	st = Move(view, ch);				if(st != FAIL) return st;
 	st = Edit(view, ch);				if(st != FAIL) return st;
 	st = Undo(view, ch);				if(st != FAIL) return st;
-	
 	return FAIL;
 }
 
 StateReturn Move(StateView& view,char ch) {
-	const int lineStartPos = view.execute(SCI_POSITIONFROMLINE, view.info.row);
+	const int lineStartPos = getLineStartPos(view);
 	const int num = view.getNum();
 	
 	switch(ch) {
@@ -185,7 +197,6 @@ StateReturn Move(StateView& view,char ch) {
 		
 		case KEYCODE('$'):
 			view.execute(SCI_LINEEND);
-			if(view.info.pos > lineStartPos) view.execute(SCI_CHARLEFT);
 			break;
 			
 		case KEYCODE('^'):
@@ -194,32 +205,29 @@ StateReturn Move(StateView& view,char ch) {
 
 		/*	Word Jump	*/
 		case KEYCODE('b'):
-			view.execute(SCI_WORDLEFT);
+			for(int i=0; i<num; ++i)
+				view.execute(SCI_WORDLEFT);
 			break;
 
 		case KEYCODE('w'):
-			view.execute(SCI_WORDRIGHT);
+			for(int i=0; i<num; ++i)
+				view.execute(SCI_WORDRIGHT);
 			break;
 			
 		/*	Arrow Move	*/
+		case KEYCODE('j'):
+		case KEYCODE('k'): 
+			view.lastCol = view.info.col;
+			VMove(view, ch);
+			break;
+		
 		case KEYCODE('h'):
 			view.execute(SCI_GOTOPOS, util::max2(view.info.pos-num, lineStartPos));
 			break;
 		
-		case KEYCODE('j'): {
-			if(view.info.row >= view.info.lineCount-1) return FAIL;
-			view.execute(SCI_LINEDOWN);
-		} break;
-			
-		case KEYCODE('k'): 
-			if(view.info.row == 0) return FAIL;
-			view.execute(SCI_LINEUP);
-			break;
-		
 		case KEYCODE('l'): {
 			//the vi cursor cannot move over the line end, thus -1
-			const int lineEndPos = view.execute(SCI_GETLINEENDPOSITION, view.info.row) - 1;	
-			const int toPos = util::min2(view.info.pos+num, lineEndPos);
+			const int toPos = util::min2(view.info.pos+num, getLineEndPos(view));
 			view.execute(SCI_GOTOPOS, toPos);
 		} break;
 		
@@ -304,6 +312,36 @@ StateReturn TillBack(StateView& view, char ch) {
 	return _Find(view, ch, SCI_POSITIONFROMLINE, -1, +1);
 }
 
+StateReturn VMove(StateView& view, char ch) {
+	const int& num = view.getNum();
+	switch(ch) {
+		case KEYCODE('j'):
+			view.execute(SCI_GOTOLINE, view.info.row+num);
+			view.execute(SCI_GOTOPOS, view.execute(SCI_GETCURRENTPOS) + view.lastCol);
+			 break;
+					
+		case KEYCODE('k'): 
+			view.execute(SCI_GOTOLINE, view.info.row-num);
+			view.execute(SCI_GOTOPOS, view.execute(SCI_GETCURRENTPOS) + view.lastCol);
+			break;
+			
+		default:
+			view.toState(Start);
+			return Start(view, ch);
+	}
+	
+	return CONTINUE;
+}
+
+StateReturn Replace(StateView& view, char ch) {
+	ScopeTempAllowEdit stae(view);
+	char str[2] = { ch, '\0' };
+	view.execute(SCI_ADDTEXT, 1, (LPARAM)str);
+	return SUCCESS;
+}
+
+
+
 StateReturn Insert(StateView& view, char ch) {
 	int row = view.info.row;
 	const int lineEndPos = view.execute(SCI_GETLINEENDPOSITION, row);	
@@ -345,9 +383,31 @@ StateReturn Insert(StateView& view, char ch) {
 
 StateReturn Edit(StateView& view, char ch) {
 	switch(ch) {
+		case KEYCODE('c'):
+			view.startCmdPos = view.info.pos;
+			view.setPostFunc(PostSel);
+			break;
+		
 		case KEYCODE('d'):
+			view.startCmdPos = view.info.pos;
 			view.setPostFunc(PostDel);
 			break;
+			
+		case KEYCODE('p'): {
+			ScopeTempAllowEdit stae(view);
+			for(int i=0; i<view.getNum(); ++i) {
+				view.execute(SCI_PASTE);
+			}
+			return SUCCESS;
+		}
+		
+		case KEYCODE('r'): {
+			const int lineEnd = getLineEndPos(view);
+			if(view.info.pos > lineEnd) return FAIL;
+			view.execute(SCI_SETCURRENTPOS, view.info.pos + 1);
+			return view.toState(Replace);
+		}
+
 			
 		default:
 			return FAIL;
@@ -375,8 +435,14 @@ void PostNone(StateView&,StateReturn) {
 
 void PostDel(StateView& view, StateReturn res) {
 	ScopeTempAllowEdit stae(view);
-	view.execute(SCI_SETANCHOR, view.lastPos());
+	view.execute(SCI_SETANCHOR, view.startCmdPos);
 	view.execute(SCI_CUT);
+}
+
+void PostSel(StateView& view, StateReturn res) {
+	view.execute(SCI_SETANCHOR, view.startCmdPos);
+	view.execute(SCI_SETANCHOR, view.startCmdPos);
+	view.toInsertMode();
 }
 
 }	//namespace State
@@ -397,11 +463,12 @@ CommandMode::~CommandMode() {
 
 void CommandMode::Notify(SCNotification* notification) {
 	//push the pos to stack
+	/*
 	const int& pos = app.getInfo().pos;
 	if(pos != sv->lastPos()) {
 		sv->pushPos(pos);
-		debug::log(sv->lastPos());
 	}
+	*/
 
 	
 	if(notification->nmhdr.code != SCN_CHARADDED) return;
